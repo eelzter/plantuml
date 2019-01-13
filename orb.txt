@@ -1,0 +1,45 @@
+version: 2.1
+
+description: "Generate SVG (Scalable Vector Graphics) from all PlantUML text files in branch"
+
+jobs:
+  generate-svg:
+    parameters:
+      extension:
+        description: "Filename extension of PlantUML text file"
+        type: string
+        default: ".txt"
+    executor:
+      name: plantuml
+    working_directory: /tmp/plantuml
+    steps:
+      - checkout
+      - generate-svg:
+          extension: <<parameters.extension>>
+
+commands:
+
+  generate-svg:
+
+    parameters:
+      extension:
+        type: string
+
+    steps:
+      - run:
+          name: Add ca-certificates
+          command: apk add --no-cache ca-certificates
+      - run:
+          name: Generate SVG
+          command: |
+            mkdir circleci_artifacts
+            java -jar /plantuml.jar -svg *<<parameters.extension>>
+            mv *.svg circleci_artifacts/
+      - store_artifacts:
+          path: circleci_artifacts
+
+
+executors:
+  plantuml:
+    docker:
+      - image: think/plantuml
