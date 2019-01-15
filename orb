@@ -1,6 +1,6 @@
 version: 2.1
 
-description: "Generate SVG (Scalable Vector Graphics) from all PlantUML text files in branch"
+description: "Generate SVG (Scalable Vector Graphics) from all PlantUML text files in branch. See details @GitHub https://github.com/circleci-orbs-tm/plantuml"
 
 jobs:
   generate-svg:
@@ -23,7 +23,9 @@ commands:
 
     parameters:
       extension:
+        description: "Filename extension of PlantUML text file"
         type: string
+        default: ".txt"
 
     steps:
       - run:
@@ -33,8 +35,8 @@ commands:
           name: Generate SVG
           command: |
             mkdir circleci_artifacts
-            java -jar /plantuml.jar -svg *<<parameters.extension>>
-            mv *.svg circleci_artifacts/
+            find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
+            find `pwd` -type f -name *.svg | xargs -I% mv % circleci_artifacts/
       - store_artifacts:
           path: circleci_artifacts
 
