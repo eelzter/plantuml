@@ -9,37 +9,82 @@ jobs:
         description: "Filename extension of PlantUML text file"
         type: string
         default: ".txt"
+
+      workspace_root:
+        description: "Root of workspace to persist"
+        type: string
+        default: ""
+
+      workspace_path:
+        description: "Path of workspace to persist"
+        type: string
+        default: ""
+
     executor:
       name: plantuml
+
     working_directory: /tmp/plantuml
+
     steps:
       - checkout
+
+      - add-ca-certificates
+
       - generate-svg:
           extension: <<parameters.extension>>
+          workspace_root: <<parameters.workspace_root>>
+          workspace_path: <<parameters.workspace_path>>
 
 commands:
+  
+  add-ca-certificates:
+    steps:
+      - run:
+          name: Add ca-certificates
+          command: apk add --no-cache ca-certificates
 
   generate-svg:
 
     parameters:
+
       extension:
         description: "Filename extension of PlantUML text file"
         type: string
         default: ".txt"
 
+      workspace_root:
+        description: "Root of workspace to persist"
+        type: string
+        default: ""
+
+      workspace_path:
+        description: "Path of workspace to persist"
+        type: string
+        default: ""
+
     steps:
       - run:
-          name: Add ca-certificates
-          command: apk add --no-cache ca-certificates
+          name: Create directory to store artifacts 
+          command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+
       - run:
           name: Generate SVG
           command: |
-            mkdir circleci_artifacts
             find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
-            find `pwd` -type f -name *.svg | xargs -I% mv % circleci_artifacts/
-      - store_artifacts:
-          path: circleci_artifacts
 
+      - run:
+          name: Move generated SVG to artifacts dir
+          command: |
+            find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+            find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{} 
+             
+      - store_artifacts:
+          path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
+
+      - persist_to_workspace:
+          root: <<parameters.workspace_root>>
+          paths:
+            - <<parameters.workspace_path>>
 
 executors:
   plantuml:

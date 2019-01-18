@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  plantuml: orbss/plantuml@0.3.9
+  plantuml: orbss/plantuml@0.4.40
 
 workflows:
   version: 2
@@ -9,4 +9,5 @@ workflows:
     jobs:
       - plantuml/generate-svg:
           extension: ".uml"
-      - plantuml/generate-svg
+          workspace_root: /tmp/circleci_workspace
+          workspace_path: .
