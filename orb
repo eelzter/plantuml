@@ -10,6 +10,11 @@ jobs:
         type: string
         default: ".txt"
 
+      updated_files_only:
+        description: "true: generate SVG from files updated from previous commit. false: generate SVG from files matched specified by parameter key 'exetention'."
+        type: boolean
+        default: false
+
       workspace_root:
         description: "Root of workspace to persist"
         type: string
@@ -32,11 +37,12 @@ jobs:
 
       - generate-svg:
           extension: <<parameters.extension>>
+          updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
           workspace_path: <<parameters.workspace_path>>
 
 commands:
-  
+
   add-ca-certificates:
     steps:
       - run:
@@ -52,6 +58,11 @@ commands:
         type: string
         default: ".txt"
 
+      updated_files_only:
+        description: "true: generate SVG from files updated from previous commit. false: generate SVG from files matched specified by parameter key 'exetention'."
+        type: boolean
+        default: false
+
       workspace_root:
         description: "Root of workspace to persist"
         type: string
@@ -63,28 +74,82 @@ commands:
         default: ""
 
     steps:
-      - run:
-          name: Create directory to store artifacts 
-          command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+      - when:
+          condition: <<parameters.updated_files_only>>
+          steps:
+            - run:
+                name: Install git
+                command: apk add --update git
 
-      - run:
-          name: Generate SVG
-          command: |
-            find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
+            - run:
+                name: Get files list which is updated from previous commit
+                command: git diff HEAD^ HEAD --name-only > list
 
-      - run:
-          name: Move generated SVG to artifacts dir
-          command: |
-            find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
-            find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{} 
-             
-      - store_artifacts:
-          path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
+            - run:
+                name: Check if diagram files updated from previous commit
+                command: |
+                  if grep <<parameters.extension>> list >/dev/null; then
+                    echo "Files have been updated from previous commit."
+                  else
+                    echo "No files have not been updated from previous commit, exit."
+                    exit 1
+                  fi
 
-      - persist_to_workspace:
-          root: <<parameters.workspace_root>>
-          paths:
-            - <<parameters.workspace_path>>
+            - run:
+                name: Create directory to store artifacts
+                command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+
+            - run:
+                name: Create file lists of generating SVG
+                command: grep <<parameters.extension>> list > text_to_svg
+
+            - run:
+                name: Generate SVG
+                command: |
+                  while read line
+                  do
+                    java -jar /plantuml.jar -svg $line
+                  done < text_to_svg
+
+            - run:
+                name: Move generated SVG to artifacts dir
+                command: |
+                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+
+            - store_artifacts:
+                path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
+
+            - persist_to_workspace:
+                root: <<parameters.workspace_root>>
+                paths:
+                  - <<parameters.workspace_path>>
+
+      - unless:
+          condition: <<parameters.updated_files_only>>
+          steps:
+            - run:
+                name: Create directory to store artifacts
+                command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+
+            - run:
+                name: Generate SVG
+                command: |
+                  find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
+
+            - run:
+                name: Move generated SVG to artifacts dir
+                command: |
+                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+
+            - store_artifacts:
+                path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
+
+            - persist_to_workspace:
+                root: <<parameters.workspace_root>>
+                paths:
+                  - <<parameters.workspace_path>>
 
 executors:
   plantuml:

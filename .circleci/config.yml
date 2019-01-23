@@ -1,13 +1,108 @@
+aliases:
+  - &step_add_ssh_keys
+    add_ssh_keys:
+      fingerprints:
+        - "c4:9a:5d:66:f2:1f:06:38:00:bb:11:48:a6:f3:3f:69"
+
+  - &step_install_git
+    run:
+      name: Install git
+      command: |
+        apk add --no-cache openssh
+        apk add --update git
+
+  - &step_configure_git
+    run:
+      name: Configure git account information
+      command: |
+        git config --global user.email "$EMAIL"
+        git config --global user.name "$USER_NAME"
+
 version: 2.1
 
 orbs:
-  plantuml: orbss/plantuml@0.4.40
+  plantuml: orbss/plantuml@0.4.60
+
+jobs:
+   delete-testings-branch:
+     executor:
+       name: plantuml/plantuml
+
+     steps:
+       - *step_add_ssh_keys
+       - *step_install_git
+       - *step_configure_git
+       - checkout
+       - run:
+           name: Delete testings branch if branch exists
+           command: |
+             sleep 10
+
+             echo 'export BRANCH_EXISTS=$(git ls-remote --heads git@github.com:${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} "testings" | wc -l)' >> $BASH_ENV
+             source $BASH_ENV
+
+             if [ $BRANCH_EXISTS -eq 0 ]; then
+               echo "testings branch does not exist"
+               exit 0
+             else
+               git remote add upstream https://${GITHUB_ACCESS_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+               git push -q https://${GITHUB_ACCESS_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} :testings
+               echo "testings branch deleted"
+             fi
+
+   push-test-files-to-branch:
+     executor:
+       name: plantuml/plantuml
+
+     steps:
+       - *step_add_ssh_keys
+       - *step_install_git
+       - *step_configure_git
+       - checkout
+       - run:
+           name: Add test files
+           command: cp -r diagrams/uml_test/ diagrams/uml_test2
+       - run:
+           name: Git commit
+           command: |
+             git add -A
+             git commit -m "commit test"
+       - run:
+           name: Git push to testings branch
+           command: |
+             git checkout -b testings
+             git remote add upstream https://${GITHUB_ACCESS_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+             git push -q https://${GITHUB_ACCESS_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} testings
 
 workflows:
   version: 2
   generator:
     jobs:
+      - delete-testings-branch:
+          context: TEST_GIT_ACCOUNT
+
+      - push-test-files-to-branch:
+          requires:
+            - delete-testings-branch
+          filters:
+            branches:
+              ignore: testings
+          context: TEST_GIT_ACCOUNT
+
       - plantuml/generate-svg:
+          filters:
+            branches:
+              only: testings
           extension: ".uml"
+          updated_files_only: true
+          workspace_root: /tmp/circleci_workspace
+          workspace_path: .
+
+      - plantuml/generate-svg:
+          filters:
+            branches:
+              ignore: testings
+          extension: ".uml"
+          updated_files_only: false
           workspace_root: /tmp/circleci_workspace
           workspace_path: .
