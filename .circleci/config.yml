@@ -6,14 +6,14 @@ aliases:
 
   - &step_install_git
     run:
-      name: Install git
+      name: Install Git
       command: |
         apk add --no-cache openssh
         apk add --update git
 
   - &step_configure_git
     run:
-      name: Configure git account information
+      name: Configure Git account information
       command: |
         git config --global user.email "$EMAIL"
         git config --global user.name "$USER_NAME"
@@ -21,7 +21,7 @@ aliases:
 version: 2.1
 
 orbs:
-  plantuml: orbss/plantuml@0.4.60
+  plantuml: orbss/plantuml@0.4.67
 
 jobs:
    delete-testings-branch:
@@ -94,8 +94,9 @@ workflows:
             branches:
               only: testings
           extension: ".uml"
+          persist_to_workspace: true
           updated_files_only: true
-          workspace_root: /tmp/circleci_workspace
+          workspace_root: /tmp/test_circleci_workspace
           workspace_path: .
 
       - plantuml/generate-svg:
@@ -103,6 +104,5 @@ workflows:
             branches:
               ignore: testings
           extension: ".uml"
+          persist_to_workspace: false
           updated_files_only: false
-          workspace_root: /tmp/circleci_workspace
-          workspace_path: .

@@ -6,24 +6,29 @@ jobs:
   generate-svg:
     parameters:
       extension:
-        description: "Filename extension of PlantUML text file"
+        description: "File name extension of the PlantUML text file"
         type: string
         default: ".txt"
 
+      persist_to_workspace:
+        description: "True: execute persist_to_workspace step. False: does not execute persist_to_workspace steps"
+        type: boolean
+        default: false
+
       updated_files_only:
-        description: "true: generate SVG from files updated from previous commit. false: generate SVG from files matched specified by parameter key 'exetention'."
+        description: "True: generate SVG from files updated from previous commit. False: generate SVG from files matched specified by parameter key 'extension'."
         type: boolean
         default: false
 
       workspace_root:
         description: "Root of workspace to persist"
         type: string
-        default: ""
+        default: "/tmp/circleci_workspace"
 
       workspace_path:
         description: "Path of workspace to persist"
         type: string
-        default: ""
+        default: "."
 
     executor:
       name: plantuml
@@ -37,6 +42,7 @@ jobs:
 
       - generate-svg:
           extension: <<parameters.extension>>
+          persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
           workspace_path: <<parameters.workspace_path>>
@@ -49,40 +55,46 @@ commands:
           name: Add ca-certificates
           command: apk add --no-cache ca-certificates
 
+
   generate-svg:
 
     parameters:
 
       extension:
-        description: "Filename extension of PlantUML text file"
+        description: "File name extension of the PlantUML text file"
         type: string
         default: ".txt"
 
+      persist_to_workspace:
+        description: "True: execute persist_to_workspace step. False: does not execute persist_to_workspace steps"
+        type: boolean
+        default: false
+
       updated_files_only:
-        description: "true: generate SVG from files updated from previous commit. false: generate SVG from files matched specified by parameter key 'exetention'."
+        description: "True: generate SVG from files updated from previous commit. False: generate SVG from files matched specified by parameter key 'extension'."
         type: boolean
         default: false
 
       workspace_root:
         description: "Root of workspace to persist"
         type: string
-        default: ""
+        default: "/tmp/circleci_workspace"
 
       workspace_path:
         description: "Path of workspace to persist"
         type: string
-        default: ""
+        default: "."
 
     steps:
       - when:
           condition: <<parameters.updated_files_only>>
           steps:
             - run:
-                name: Install git
+                name: Install Git
                 command: apk add --update git
 
             - run:
-                name: Get files list which is updated from previous commit
+                name: Get files list, which is updated from previous commit
                 command: git diff HEAD^ HEAD --name-only > list
 
             - run:
@@ -96,7 +108,7 @@ commands:
                   fi
 
             - run:
-                name: Create directory to store artifacts
+                name: Create directories to store artifacts
                 command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
 
             - run:
@@ -112,7 +124,7 @@ commands:
                   done < text_to_svg
 
             - run:
-                name: Move generated SVG to artifacts dir
+                name: Move generated SVG to artifacts directory
                 command: |
                   find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
                   find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
@@ -120,16 +132,11 @@ commands:
             - store_artifacts:
                 path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
 
-            - persist_to_workspace:
-                root: <<parameters.workspace_root>>
-                paths:
-                  - <<parameters.workspace_path>>
-
       - unless:
           condition: <<parameters.updated_files_only>>
           steps:
             - run:
-                name: Create directory to store artifacts
+                name: Create directories to store artifacts
                 command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
 
             - run:
@@ -138,7 +145,7 @@ commands:
                   find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
 
             - run:
-                name: Move generated SVG to artifacts dir
+                name: Move generated SVG to artifacts directory
                 command: |
                   find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
                   find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
@@ -146,10 +153,20 @@ commands:
             - store_artifacts:
                 path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
 
+      - when:
+          condition: <<parameters.persist_to_workspace>>
+          steps:
             - persist_to_workspace:
                 root: <<parameters.workspace_root>>
                 paths:
                   - <<parameters.workspace_path>>
+
+      - unless:
+          condition: <<parameters.persist_to_workspace>>
+          steps:
+            - run:
+                name: End of steps
+                command: echo "persist_to_workspace step skipped."
 
 executors:
   plantuml:
