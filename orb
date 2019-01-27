@@ -1,22 +1,41 @@
 version: 2.1
 
-description: "Generate SVG (Scalable Vector Graphics) from all PlantUML text files in branch. See details @GitHub https://github.com/circleci-orbs-tm/plantuml"
+description: |
+  "Generate diagrams directly in specified format from PlantUML text files in the branch.
+    See details @GitHub https://github.com/circleci-orbs-tm/plantuml"
 
 jobs:
   generate-svg:
     parameters:
+      output_file_format:
+        description: |
+          "Output file format option. Must be one of those:
+             - png
+             - svg
+             - eps
+             - vdx
+             - utxt
+             - latex"
+        type: enum
+        enum: ["png", "svg", "eps", "vdx", "utxt", "latex"]
+        default: "png"
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
-        default: ".txt"
+        default: ".puml"
 
       persist_to_workspace:
-        description: "True: execute persist_to_workspace step. False: does not execute persist_to_workspace steps"
+        description: |
+          "True: execute persist_to_workspace step.
+            False: does not execute persist_to_workspace steps"
         type: boolean
         default: false
 
       updated_files_only:
-        description: "True: generate SVG from files updated from previous commit. False: generate SVG from files matched specified by parameter key 'extension'."
+        description: |
+          "True: generate output from files updated from previous commit.
+            False: generate output from files matched specified by parameter key 'extension'."
         type: boolean
         default: false
 
@@ -41,6 +60,7 @@ jobs:
       - add-ca-certificates
 
       - generate-svg:
+          output_file_format: <<parameters.output_file_format>>
           extension: <<parameters.extension>>
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
@@ -59,19 +79,36 @@ commands:
   generate-svg:
 
     parameters:
+      output_file_format:
+
+        description: |
+          "Output file format option. Must be one of those:
+             - png
+             - svg
+             - eps
+             - vdx
+             - utxt
+             - latex"
+        type: enum
+        enum: ["png", "svg", "eps", "vdx", "utxt", "latex"]
+        default: "png"
 
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
-        default: ".txt"
+        default: ".puml"
 
       persist_to_workspace:
-        description: "True: execute persist_to_workspace step. False: does not execute persist_to_workspace steps"
+        description: |
+          "True: execute persist_to_workspace step.
+            False: does not execute persist_to_workspace steps"
         type: boolean
         default: false
 
       updated_files_only:
-        description: "True: generate SVG from files updated from previous commit. False: generate SVG from files matched specified by parameter key 'extension'."
+        description: |
+          "True: generate output from files updated from previous commit.
+            False: generate output from files matched specified by parameter key 'extension'."
         type: boolean
         default: false
 
@@ -112,22 +149,22 @@ commands:
                 command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
 
             - run:
-                name: Create file lists of generating SVG
+                name: Create file lists to generate
                 command: grep <<parameters.extension>> list > text_to_svg
 
             - run:
-                name: Generate SVG
+                name: Generate output
                 command: |
                   while read line
                   do
-                    java -jar /plantuml.jar -svg $line
+                    java -jar /plantuml.jar -<<parameters.output_file_format>> $line
                   done < text_to_svg
 
             - run:
-                name: Move generated SVG to artifacts directory
+                name: Move generated output to artifacts directory
                 command: |
-                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
-                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *<<parameters.output_file_format>> | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *<<parameters.output_file_format>> | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
 
             - store_artifacts:
                 path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
@@ -140,15 +177,15 @@ commands:
                 command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
 
             - run:
-                name: Generate SVG
+                name: Generate output
                 command: |
-                  find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -svg *<<parameters.extension>>
+                  find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -<<parameters.output_file_format>> *<<parameters.extension>>
 
             - run:
                 name: Move generated SVG to artifacts directory
                 command: |
-                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
-                  find `pwd` -type f -name *.svg | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *.<<parameters.output_file_format>> | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -I {} dirname {} | sort | uniq | xargs -i mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
+                  find `pwd` -type f -name *.<<parameters.output_file_format>> | sed -e "s~$CIRCLE_WORKING_DIRECTORY~~" | xargs -i mv `pwd`{}  <<parameters.workspace_root>>/<<parameters.workspace_path>>{}
 
             - store_artifacts:
                 path: <<parameters.workspace_root>>/<<parameters.workspace_path>>
