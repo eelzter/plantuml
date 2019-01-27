@@ -21,7 +21,7 @@ aliases:
 version: 2.1
 
 orbs:
-  plantuml: orbss/plantuml@0.4.75
+  plantuml: orbss/plantuml@0.4.76
 
 jobs:
    delete-testings-branch:
@@ -88,8 +88,8 @@ workflows:
             branches:
               ignore: testings
           context: TEST_GIT_ACCOUNT
-#1
-      - plantuml/generate-svg:
+
+      - plantuml/generate-png:
           filters:
             branches:
               only: testings
@@ -98,54 +98,40 @@ workflows:
           updated_files_only: true
           workspace_root: /tmp/test_circleci_workspace
           workspace_path: .
-#2
+
       - plantuml/generate-svg:
           filters:
             branches:
               ignore: testings
-          output_file_format: svg
           persist_to_workspace: false
           updated_files_only: false
-#3
-      - plantuml/generate-svg:
+
+      - plantuml/generate-eps:
           filters:
             branches:
               ignore: testings
-          output_file_format: eps
           extension: ".puml"
           persist_to_workspace: false
           updated_files_only: false
-#4
-      - plantuml/generate-svg:
+
+      - plantuml/generate-vdx:
           filters:
             branches:
               ignore: testings
-          output_file_format: vdx
           persist_to_workspace: false
           updated_files_only: false
-#5
-      - plantuml/generate-svg:
+
+      - plantuml/generate-utxt:
           filters:
             branches:
               ignore: testings
-          output_file_format: utxt
           extension: ".puml"
           persist_to_workspace: false
           updated_files_only: false
-#6
-      - plantuml/generate-svg:
+
+      - plantuml/generate-latex:
           filters:
             branches:
               ignore: testings
-          output_file_format: latex
-          persist_to_workspace: false
-          updated_files_only: false
-#7
-      - plantuml/generate-svg:
-          filters:
-            branches:
-              ignore: testings
-          output_file_format: png
-          extension: ".puml"
           persist_to_workspace: false
           updated_files_only: false
