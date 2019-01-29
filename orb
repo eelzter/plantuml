@@ -7,6 +7,11 @@ description: |
 jobs:
   generate-png:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -46,9 +51,12 @@ jobs:
 
       - add-ca-certificates
 
+      - install-japanese-fonts
+
       - generate:
-          output_file_format: png 
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: png
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -56,6 +64,11 @@ jobs:
 
   generate-svg:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -96,8 +109,9 @@ jobs:
       - add-ca-certificates
 
       - generate:
-          output_file_format: svg 
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: svg
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -105,6 +119,11 @@ jobs:
 
   generate-eps:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -144,9 +163,12 @@ jobs:
 
       - add-ca-certificates
 
+      - install-japanese-fonts
+
       - generate:
-          output_file_format: eps
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: eps
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -154,6 +176,11 @@ jobs:
 
   generate-vdx:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -194,8 +221,9 @@ jobs:
       - add-ca-certificates
 
       - generate:
-          output_file_format: vdx
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: vdx
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -203,6 +231,11 @@ jobs:
 
   generate-utxt:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -243,8 +276,9 @@ jobs:
       - add-ca-certificates
 
       - generate:
-          output_file_format: utxt 
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: utxt
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -252,6 +286,11 @@ jobs:
 
   generate-latex:
     parameters:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
+
       extension:
         description: "File name extension of the PlantUML text file"
         type: string
@@ -292,8 +331,9 @@ jobs:
       - add-ca-certificates
 
       - generate:
-          output_file_format: latex 
+          charset: <<parameters.charset>>
           extension: <<parameters.extension>>
+          output_file_format: latex
           persist_to_workspace: <<parameters.persist_to_workspace>>
           updated_files_only: <<parameters.updated_files_only>>
           workspace_root: <<parameters.workspace_root>>
@@ -307,12 +347,30 @@ commands:
           name: Add ca-certificates
           command: apk add --no-cache ca-certificates
 
+  install-japanese-fonts:
+    steps:
+      - run:
+          name: Update system
+          command: apk update
+
+      - run:
+          name: Install Japanese fonts
+          command: apk add --no-cache --repository https://nl.alpinelinux.org/alpine/edge/testing font-ipa
 
   generate:
 
     parameters:
-      output_file_format:
+      charset:
+        description: "Character Encoding of generated file. Default encoding type is system dependent."
+        type: string
+        default: ""
 
+      extension:
+        description: "File name extension of the PlantUML text file"
+        type: string
+        default: ".puml"
+
+      output_file_format:
         description: |
           "Output file format option. Must be one of those:
              - png
@@ -324,11 +382,6 @@ commands:
         type: enum
         enum: ["png", "svg", "eps", "vdx", "utxt", "latex"]
         default: "png"
-
-      extension:
-        description: "File name extension of the PlantUML text file"
-        type: string
-        default: ".puml"
 
       persist_to_workspace:
         description: |
@@ -384,13 +437,27 @@ commands:
                 name: Create file lists to generate
                 command: grep <<parameters.extension>> list > text_to_svg
 
-            - run:
-                name: Generate output
-                command: |
-                  while read line
-                  do
-                    java -jar /plantuml.jar -<<parameters.output_file_format>> $line
-                  done < text_to_svg
+            - when:
+                condition: <<parameters.charset>>
+                steps:
+                  - run:
+                      name: Generate output
+                      command: |
+                        while read line
+                        do
+                          java -jar /plantuml.jar -charset <<parameters.charset>> -<<parameters.output_file_format>> $line
+                        done < text_to_svg
+
+            - unless:
+                condition: <<parameters.charset>>
+                steps:
+                  - run:
+                      name: Generate output
+                      command: |
+                        while read line
+                        do
+                          java -jar /plantuml.jar -<<parameters.output_file_format>> $line
+                        done < text_to_svg
 
             - run:
                 name: Move generated output to artifacts directory
@@ -408,10 +475,21 @@ commands:
                 name: Create directories to store artifacts
                 command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
 
-            - run:
-                name: Generate output
-                command: |
-                  find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -<<parameters.output_file_format>> *<<parameters.extension>>
+            - when:
+                condition: <<parameters.charset>>
+                steps:
+                  - run:
+                      name: Generate output
+                      command: |
+                        find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -charset <<parameters.charset>> -<<parameters.output_file_format>> *<<parameters.extension>>
+
+            - unless:
+                condition: <<parameters.charset>>
+                steps:
+                  - run:
+                      name: Generate output
+                      command: |
+                        find `pwd` -type f -name *<<parameters.extension>> | xargs java -jar /plantuml.jar -<<parameters.output_file_format>> *<<parameters.extension>>
 
             - run:
                 name: Move generated SVG to artifacts directory

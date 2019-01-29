@@ -21,7 +21,7 @@ aliases:
 version: 2.1
 
 orbs:
-  plantuml: orbss/plantuml@0.4.76
+  plantuml: orbss/plantuml@0.4.100
 
 jobs:
    delete-testings-branch:
@@ -93,6 +93,7 @@ workflows:
           filters:
             branches:
               only: testings
+          charset: UTF-8
           extension: ".puml"
           persist_to_workspace: true
           updated_files_only: true
@@ -103,6 +104,7 @@ workflows:
           filters:
             branches:
               ignore: testings
+          charset: UTF-8
           persist_to_workspace: false
           updated_files_only: false
 
@@ -110,6 +112,7 @@ workflows:
           filters:
             branches:
               ignore: testings
+          charset: UTF-8
           extension: ".puml"
           persist_to_workspace: false
           updated_files_only: false
@@ -118,6 +121,7 @@ workflows:
           filters:
             branches:
               ignore: testings
+          charset: UTF-8
           persist_to_workspace: false
           updated_files_only: false
 
@@ -125,6 +129,7 @@ workflows:
           filters:
             branches:
               ignore: testings
+          charset: UTF-8
           extension: ".puml"
           persist_to_workspace: false
           updated_files_only: false
@@ -133,5 +138,6 @@ workflows:
           filters:
             branches:
               ignore: testings
+          charset: UTF-8
           persist_to_workspace: false
           updated_files_only: false
