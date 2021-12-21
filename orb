@@ -358,7 +358,6 @@ commands:
           command: apk add --no-cache --repository https://nl.alpinelinux.org/alpine/edge/testing font-ipa
 
   generate:
-
     parameters:
       charset:
         description: "Character Encoding of generated file. Default encoding type is system dependent."
@@ -473,7 +472,7 @@ commands:
           steps:
             - run:
                 name: Create directories to store artifacts
-                command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+                command: mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>
 
             - when:
                 condition: <<parameters.charset>>
