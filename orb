@@ -431,7 +431,7 @@ commands:
 
             - run:
                 name: Create directories to store artifacts
-                command: mkdir -p <<parameters.workspace_root>>/<<workspace_path>>
+                command: mkdir -p <<parameters.workspace_root>>/<<parameters.workspace_path>>
 
             - run:
                 name: Create file lists to generate
